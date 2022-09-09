@@ -28,7 +28,7 @@ int main()
     }
 
     {
-        Scope s("unique_ptr overview");
+        Scope s("unique_ptr - basics");
 
         // By default is initialized by nullptr
         std::unique_ptr<int> pNullptr;
@@ -79,16 +79,89 @@ int main()
     }
 
     {
-        Scope s("unique_ptr transfer ownership");
+        Scope s("unique_ptr - transfer ownership");
 
         std::unique_ptr<Car> pCar1 = std::make_unique<Car>("car1");
 
         // Transfer ownership by 'std::move'
         auto pCar2 = std::move(pCar1);
 
-        // 2. unique_ptr can be created from previously allocated space
-        // directly
-        std::unique_ptr<Car> pCarDirect{new Car("porsche direct")};
+        if(!pCar1)
+        {
+            std:: cout << "pCar1 becomes nullptr\n";
+        }
+
+        if(pCar2)
+        {
+            std:: cout << "pCar2 takes ownership of pCar1 object\n";
+            pCar2->drive();
+        }
+    }
+
+    {
+        Scope s("unique_ptr - pass by value");
+
+        // pass pointer by value
+        // ownership is transferred to function
+        auto jobByLValue = [](std::unique_ptr<Car> pCar){
+            Scope s("jobByValue");
+            pCar->drive();
+            std::cout << "'pCar' will be deleted here\n";
+            // here destructor of 'pCar' is called
+        };
+
+        auto pCar1 = std::make_unique<Car>("car1");
+
+        // cannot share ownership
+        // compilation error
+        //jobByLValue(pCar1);
+
+        // l-value object ownership is transferred to function
+        jobByLValue(std::move(pCar1));
+
+        // r-value object can be transferred implicitly
+        jobByLValue(std::make_unique<Car>("car1"));
+    }
+
+    {
+        Scope s("unique_ptr - pass by reference");
+
+        // pass pointer by reference
+        // ownership is not transferred
+        // only wrapped object can be modified
+        auto jobByConstReference = [](const std::unique_ptr<Car> &pCar){
+            Scope s("jobByConstReference");
+
+            // object can be modified - non const method called
+            pCar->drive();
+
+            // non-const method of pointer wrapper class cannot be called
+            //pCar.reset();
+        };
+
+        auto pCar1 = std::make_unique<Car>("car1");
+
+        // lk-value object can be passed
+        // ownership is not transferred
+        jobByConstReference(pCar1);
+    }
+
+    {
+        Scope s("unique_ptr - return from function");
+
+        auto buildObject = [](){
+            auto pCar = std::make_unique<Car>("local car");
+            pCar->print_address();
+
+            // compiler makes optimizations
+            // copy is not returned
+            // returned value is reference to local object
+            // behaviour depends on used compiler
+            return pCar;
+        };
+
+        auto pCar = buildObject();
+        pCar->print_address();
     }
 
 }
